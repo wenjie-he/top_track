@@ -14,6 +14,7 @@ init_dir :
 	-mkdir -p ${project_dir}/deploy
 	-mkdir -p ${project_dir}/output
 	-cp -r ${project_dir}/deploy/* ${project_dir}/output/
+	make -C ../invention/
 
 output/bin/out : ${objs} init_dir
 	g++ -o output/bin/out ${objs} -lz -L /home/hewenjie/codebase/invention/output/lib/ -linvent
