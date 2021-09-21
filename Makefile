@@ -1,33 +1,44 @@
-build_dir = ~/build_dir/top_track
+build_dir = /home/hewenjie/build_dir/top_track/
 project_dir = ./
 output_dir = ./output/
+third_party = /home/hewenjie/codebase/wenjie-he/invention/
 
-srcs = src/top.cpp src/main.cpp
-objs = ${build_dir}/src/top.o \
-	   ${build_dir}/src/main.o
+out_include = $(foreach n, $(third_party), -I $(n)output/include)
+
+srcs1 = src/main.cpp src/top.cpp
+srcs2 = src/main.cpp src/top.cpp
+objs1 = $(foreach n, $(srcs1), $(build_dir)$(n).o)
+objs2 = $(foreach n, $(srcs2), $(build_dir)$(n).o)
+deps1 = $(foreach n, $(srcs1), $(build_dir)$(n).d)
+deps2 = $(foreach n, $(srcs2), $(build_dir)$(n).d)
+
+target1 = $(build_dir)output/lib/target1
+target2 = $(build_dir)output/lib/target2
 
 .PHONY : target_all init_dir
-target_all : init_dir output/bin/out
+target_all : init_dir $(target1) $(target2)
 init_dir : 
-	-mkdir -p ${build_dir}
-	-mkdir -p ${build_dir}/src
-	-mkdir -p ${project_dir}/deploy
-	-mkdir -p ${project_dir}/output
-	-cp -r ${project_dir}/deploy/* ${project_dir}/output/
-	make -C ../invention/
+	echo "init dir please"
+$(target1) : $(objs1) $(target2) $(target3)
+	g++ -o $(target1) $(objs1) $(target2) $(target3)
+$(target2) : $(objs2)
+	g++ -o $(target2) $(objs2)
+$(target3) :
+	make -C /home/hewenjie/codebase/wenjie-he/target3
 
-output/bin/out : ${objs} init_dir
-	g++ -o output/bin/out ${objs} -lz -L /home/hewenjie/codebase/invention/output/lib/ -linvent
+# building objects
+$(objs1):$(build_dir)%.o:%
+	g++ -c $< -o $@ -I ./ -I $(out_include)
+$(objs2):$(build_dir)%.o:%
+	g++ -c $< -o $@ -I ./ -I $(out_include)
 
-${build_dir}/src/main.o : src/main.cpp 
-	g++ -c src/main.cpp -o ${build_dir}/src/main.o -I ./ -I /home/hewenjie/codebase/invention/output/include/
-${build_dir}/src/top.o : src/top.cpp
-	g++ -c src/top.cpp -o ${build_dir}/src/top.o -I ./
+#building dependence
+$(deps1):$(build_dir)%.d:%
+	g++ -MM $< -I ./ -I $(out_include) | sed -r "s#(^.*.o):()#$@ $(build_dir)$<.o:#g" > $@;
+$(deps2):$(build_dir)%.d:%
+	g++ -MM $< -I ./ -I $(out_include) | sed -r "s#(^.*.o):()#$@ $(build_dir)$<.o:#g" > $@;
 
--include ${build_dir}/header.depend
-${build_dir}/header.depend : ${srcs}
-	g++ -MM ${srcs} > ${build_dir}/header.depend -I ./ -I /home/hewenjie/codebase/invention/output/include/
+-include $(deps1) $(deps2)
 
-.PHONY:clean
 clean:
-	rm -fr output ${objs} ${build_dir}/header.depend
+	rm $(objs) $(deps)
