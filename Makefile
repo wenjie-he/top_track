@@ -44,6 +44,9 @@ $(local_lib_deps) : $(build_dir)%.d : %
 local_protos = idl/idl.proto idl/rec/rec.proto
 local_proto_objs = $(foreach n, $(local_protos), $(output_dir)$(n).cpp.o)
 local_proto_deps = $(foreach n, $(local_protos), $(output_dir)$(n).cpp.d)
+local_proto_srcs = $(foreach n, $(local_protos), $(output_dir)$(n).cpp)
+local_proto_srcs : $(build_dir)%.cpp : %
+	protoc --cpp_out=./ $<
 local_proto_objs : $(build_dir)%.cpp.o : %
 	g++ c $< -o $@ $(total_include)
 $(local_proto_deps) : %.d : %
