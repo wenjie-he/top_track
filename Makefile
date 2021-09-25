@@ -1,44 +1,65 @@
-build_dir = /home/hewenjie/build_dir/top_track/
-project_dir = ./
-output_dir = ./output/
-third_party = /home/hewenjie/codebase/wenjie-he/invention/
+output_dir = /home/hewenjie/build_dir/
+project = wenjie-he/top_track/
+build_dir = $(output_dir)$(project)
 
-out_include = $(foreach n, $(third_party), -I $(n)output/include)
+totol_include = -I ./ -I $(output_dir)$(third_party)
 
-srcs1 = src/main.cpp src/top.cpp
-srcs2 = src/main.cpp src/top.cpp
-objs1 = $(foreach n, $(srcs1), $(build_dir)$(n).o)
-objs2 = $(foreach n, $(srcs2), $(build_dir)$(n).o)
-deps1 = $(foreach n, $(srcs1), $(build_dir)$(n).d)
-deps2 = $(foreach n, $(srcs2), $(build_dir)$(n).d)
+#process src
+srcs = src/main.cpp src/top.cpp
+objs = $(foreach n, $(srcs1), $(build_dir)$(n).o)
+deps = $(foreach n, $(srcs1), $(build_dir)$(n).d)
+$(objs) : $(build_dir)%.o : %
+	g++ -c $< -o $@ -I $(total_include)
+$(deps) : $(build_dir)%.d : %
+	g++ -MM $< $(total_include) | sed -r "s#(^.*.o):()#$@ $(build_dir)$<.o:#g" > $@;
+-include $(deps)
 
-target1 = $(build_dir)output/lib/target1
-target2 = $(build_dir)output/lib/target2
+#proceess depend libs
+third_party = wenjie-he/invention/
+depend_name = lib
+depend_libs = $(output_dir)$(third_party)lib/libtest1.so $(output_dir)$(third_party)lib/libtest2.so
+$(depend_libs) :
+	make -C third_party $(lib)
 
-.PHONY : target_all init_dir
-target_all : init_dir $(target1) $(target2)
+#process depend protos
+third_party = wenije-he/invention/
+depend_name = idl
+depend_protos = $(third_party)idl/idl.proto $(third_party)idl/rec/rec.proto
+depend_proto_objs = $(foreach n, $(depend_protos), $(output_dir)$(n).cpp.o)
+$(depend_proto_objs) : 
+	make -C third_party $(idl)
+
+#process local libs
+local_name = local_lib
+local_libs = $(build_dir)output/libs/liblocal1.so $(build_dir)output/libs/liblocal2.so
+local_lib_src = src/test1.cpp src/test2.cpp
+local_lib_objs = $(foreach n, $(local_lib_src), $(output_dir)$(n).cpp.o)
+$(local_lib_objs) : $(build_dir)%.o : %
+	g++ -c $< -o $@ $(total_include)
+$(local_lib_deps) : $(build_dir)%.d : %
+	g++ -MM $< $(total_include) | sed -r "s#(^.*.o):()#$@ $(build_dir)$<.o:#g" > $@;
+-include $(local_lib_deps)
+
+#process local protos
+local_protos = idl/idl.proto idl/rec/rec.proto
+local_proto_objs = $(foreach n, $(local_protos), $(output_dir)$(n).cpp.o)
+local_proto_deps = $(foreach n, $(local_protos), $(output_dir)$(n).cpp.d)
+local_proto_objs : $(build_dir)%.cpp.o : %
+	g++ c $< -o $@ $(total_include)
+$(local_proto_deps) : %.d : %
+	g++ -MM $< $(total_include) | sed -r "s#(^.*.o):()#$@ $<.o:#g" > $@;
+-include $(local_proto_deps)
+
+#process target
+target1 = $(build_dir)$(output)a.out
+target2 = $(local_libs)
+target1 : $(objs) $(depend_libs) $(depend_proto_objs) $(local_libs)
+	g++ -o $(target) $<
+target_all : $(init_dir) $(target1) $(target2)
+
 init_dir : 
 	echo "init dir please"
-$(target1) : $(objs1) $(target2) $(target3)
-	g++ -o $(target1) $(objs1) $(target2) $(target3)
-$(target2) : $(objs2)
-	g++ -o $(target2) $(objs2)
-$(target3) :
-	make -C /home/hewenjie/codebase/wenjie-he/target3
 
-# building objects
-$(objs1):$(build_dir)%.o:%
-	g++ -c $< -o $@ -I ./ -I $(out_include)
-$(objs2):$(build_dir)%.o:%
-	g++ -c $< -o $@ -I ./ -I $(out_include)
-
-#building dependence
-$(deps1):$(build_dir)%.d:%
-	g++ -MM $< -I ./ -I $(out_include) | sed -r "s#(^.*.o):()#$@ $(build_dir)$<.o:#g" > $@;
-$(deps2):$(build_dir)%.d:%
-	g++ -MM $< -I ./ -I $(out_include) | sed -r "s#(^.*.o):()#$@ $(build_dir)$<.o:#g" > $@;
-
--include $(deps1) $(deps2)
-
+.PHONY : clean
 clean:
 	rm $(objs) $(deps)
